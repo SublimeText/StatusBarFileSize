@@ -128,7 +128,6 @@ class StatusBarFileSize(sublime_plugin.EventListener):
         return settings.get("estimate_file_size", self.ESTIMATE_DEFAULT)
 
     def update_file_size(self, view):
-        print("update_file_size")
         view.erase_status(self.KEY_SIZE)
 
         if not view.file_name() or view.is_dirty():
