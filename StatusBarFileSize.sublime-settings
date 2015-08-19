@@ -1,0 +1,9 @@
+{
+    // If true, the size of the buffer will be estimated based on the buffer
+    // contents and the encoding if the buffer is dirty or not associated with
+    // a file. Because this estimation process has to encode the entire buffer
+    // contents with the file encoding whenever the buffer is modified, it might
+    // have a noticeable performance impact when working with large files on
+    // slower machines.
+    "estimate_file_size": true
+}
