@@ -20,8 +20,11 @@ def file_size_str(size, divisor=1024):
 
 # Far from a perfect system, but seems to be the only way to get a usable Python
 # encoding from Sublime Text.
+SPECIAL_HEXADECIMAL = "special-hexadecimal"
+
 ENCODING_MAP = {
     "Undefined": "ascii",
+    "Hexadecimal": SPECIAL_HEXADECIMAL,
     "UTF-8": "utf-8",
     "UTF-16 LE": "utf-16le",
     "UTF-16 BE": "utf-16be",
@@ -91,6 +94,11 @@ def ranges(start, end, bs):
         i += bs
 
 
+def count_hex_digits(s):
+    # Count hexadecimal digits in s.
+    return sum(1 for x in s if x in "abcdefABCDEF0123456789")
+
+
 def estimate_file_size(view):
     tag = view.change_count()
 
@@ -108,13 +116,22 @@ def estimate_file_size(view):
             # Buffer was changed, we abort our mission.
             return None
         r = sublime.Region(start, end)
-        text = view.substr(r).replace("\n", line_endings)
-        try:
-            size += len(text.encode(encoding))
-        except UnicodeError:
-            # Encoding failed, we just fail here.
-            return None
-    return size
+        text = view.substr(r)
+
+        if encoding == SPECIAL_HEXADECIMAL:
+            # Special-case handling for the special-case Hexadecimal encoding.
+            # The division doesn't truncate on purpose, to count half-bytes when
+            # we have uneven numbers of hex digits. The result gets forced into
+            # an int on return.
+            size += count_hex_digits(text) / 2
+        else:
+            try:
+                size += len(text.replace("\n", line_endings).encode(encoding))
+            except UnicodeError:
+                # Encoding failed, we just fail here.
+                return None
+
+    return int(size)
 
 
 class StatusBarFileSize(sublime_plugin.EventListener):
