@@ -5,5 +5,8 @@
     // contents with the file encoding whenever the buffer is modified, it might
     // have a noticeable performance impact when working with large files on
     // slower machines.
-    "estimate_file_size": true
+    "estimate_file_size": true,
+    // As a web developer, you might be interested in the gzip size of a file
+    // use this to calculate said gzip size
+    "calculate_gzip": false
 }
