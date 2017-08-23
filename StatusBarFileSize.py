@@ -145,7 +145,6 @@ class StatusBarFileSize(sublime_plugin.EventListener):
         return settings.get("estimate_file_size", self.ESTIMATE_DEFAULT)
 
     def update_file_size(self, view):
-        view.erase_status(self.KEY_SIZE)
 
         if not view.file_name() or view.is_dirty():
             if self.setting_estimate_file_size:
@@ -164,6 +163,8 @@ class StatusBarFileSize(sublime_plugin.EventListener):
 
         if size is not None:
             view.set_status(self.KEY_SIZE, pattern % file_size_str(size))
+        else:
+            view.erase_status(self.KEY_SIZE)
 
     on_post_save_async = update_file_size
     on_modified_async = update_file_size
