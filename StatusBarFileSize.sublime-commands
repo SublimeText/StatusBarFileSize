@@ -1,0 +1,10 @@
+[
+    {
+        "caption": "Preferences: Status Bar File Size Settings",
+        "command": "edit_settings",
+        "args": {
+            "base_file": "${packages}/Status Bar File Size/StatusBarFileSize.sublime-settings",
+            "default": "{\n\t$0\n}"
+        }
+    }
+]

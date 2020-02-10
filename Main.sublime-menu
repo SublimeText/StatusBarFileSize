@@ -10,19 +10,11 @@
                 [
                     {
                         "caption": "Status Bar File Size",
-                        "children":
-                        [
-                            {
-                                "command": "open_file",
-                                "args": {"file": "${packages}/StatusBarFileSize/StatusBarFileSize.sublime-settings"},
-                                "caption": "Settings – Default"
-                            },
-                            {
-                                "command": "open_file",
-                                "args": {"file": "${packages}/User/StatusBarFileSize.sublime-settings"},
-                                "caption": "Settings – User"
-                            }
-                        ]
+                        "command": "edit_settings",
+                        "args": {
+                            "base_file": "${packages}/Status Bar File Size/StatusBarFileSize.sublime-settings",
+                            "default": "{\n\t$0\n}"
+                        }
                     }
                 ]
             }
