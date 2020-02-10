@@ -1,10 +1,15 @@
+import io
 import os.path
+import zlib
+
 import sublime
 import sublime_plugin
 
 
 # Format a size in bytes into a nicer string value. Defaults to 1024 convention.
 def file_size_str(size, divisor=1024):
+    if size is None:
+        return None
     sizes = ["KiB", "MiB", "GiB", "TiB", "PiB", "EiB", "ZiB", "YiB"]
     if size < divisor:
         return "%d %s" % (size, "Bytes" if size != 1 else "Byte")
@@ -99,7 +104,7 @@ def count_hex_digits(s):
     return sum(1 for x in s if x in "abcdefABCDEF0123456789")
 
 
-def estimate_file_size(view):
+def estimate_file_size(view, deflate=False):
     tag = view.change_count()
 
     try:
@@ -108,13 +113,14 @@ def estimate_file_size(view):
         overhead = CONSTANT_OVERHEAD.get(view.encoding(), 0)
     except KeyError:
         # Unknown encoding or line ending, so we fail.
-        return None
+        return None, None
 
     size = overhead
+    data = io.BytesIO()
     for start, end in ranges(0, view.size(), BLOCK_SIZE):
         if view.change_count() != tag:
             # Buffer was changed, we abort our mission.
-            return None
+            return None, None
         r = sublime.Region(start, end)
         text = view.substr(r)
 
@@ -126,46 +132,52 @@ def estimate_file_size(view):
             size += count_hex_digits(text) / 2
         else:
             try:
-                size += len(text.replace("\n", line_endings).encode(encoding))
+                encoded_text = text.replace("\n", line_endings).encode(encoding)
+                size += len(encoded_text)
+                if deflate:
+                    data.write(encoded_text)
             except UnicodeError:
                 # Encoding failed, we just fail here.
-                return None
+                return None, None
 
-    return int(size)
+    deflate_size = len(zlib.compress(data.getvalue())) if deflate else None
+    return int(size), deflate_size
 
 
 class StatusBarFileSize(sublime_plugin.EventListener):
     KEY_SIZE = "FileSize"
     SETTINGS = "StatusBarFileSize.sublime-settings"
-    ESTIMATE_DEFAULT = True
-
-    @property
-    def setting_estimate_file_size(self):
-        settings = sublime.load_settings(self.SETTINGS)
-        return settings.get("estimate_file_size", self.ESTIMATE_DEFAULT)
 
     def update_file_size(self, view):
+        settings = sublime.load_settings(self.SETTINGS)
+        deflate = settings.get("deflate", False)
+
+        size, deflate_size = None, None
+        pattern = "{}"
 
         if not view.file_name() or view.is_dirty():
-            if self.setting_estimate_file_size:
-                # Try to estimate the file size based on encoding and line
-                # endings.
-                size = estimate_file_size(view)
-                pattern = "~%s"
-            else:
-                size = None
+            if settings.get("estimate_file_size", True):
+                # Estimate the file size based on encoding and line endings.
+                size, deflate_size = estimate_file_size(view, deflate)
+                pattern = "~" + pattern
         else:
             try:
                 size = os.path.getsize(view.file_name())
-                pattern = "%s"
+                with open(view.file_name(), 'rb') as f:
+                    deflate_size = len(zlib.compress(f.read()))
             except OSError:
-                size = None
+                pass
+
+        if deflate and deflate_size:
+            pattern += " (gzip: {})"
 
         if size is not None:
-            view.set_status(self.KEY_SIZE, pattern % file_size_str(size))
+            status_text = pattern.format(file_size_str(size), file_size_str(deflate_size))
+            view.set_status(self.KEY_SIZE, status_text)
         else:
             view.erase_status(self.KEY_SIZE)
 
+    # TODO add some scheduling
     on_post_save_async = update_file_size
     on_modified_async = update_file_size
     on_activated_async = update_file_size
