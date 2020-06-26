@@ -9,5 +9,8 @@
 
     // If true, additionally determine the file size when using the DEFLATE
     // compression algorithm, as used by gzip.
-    "deflate": false
+    "deflate": false,
+
+    // Choose between "metric" and "binary" units (e.g. KB vs KiB).
+    "units": "binary",
 }

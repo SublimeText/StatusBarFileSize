@@ -7,10 +7,13 @@ import sublime_plugin
 
 
 # Format a size in bytes into a nicer string value. Defaults to 1024 convention.
-def file_size_str(size, divisor=1024):
+def file_size_str(size, units='binary'):
     if size is None:
         return None
+    divisor = 1024 if units == 'binary' else 1000
     sizes = ["KiB", "MiB", "GiB", "TiB", "PiB", "EiB", "ZiB", "YiB"]
+    if units == 'metric':
+        sizes = [x.replace('i', '') for x in sizes]
     if size < divisor:
         return "%d %s" % (size, "Bytes" if size != 1 else "Byte")
     else:
@@ -171,8 +174,10 @@ class StatusBarFileSize(sublime_plugin.EventListener):
         if deflate and deflate_size:
             pattern += " (gzip: {})"
 
+        units = settings.get('units', 'binary')
         if size is not None:
-            status_text = pattern.format(file_size_str(size), file_size_str(deflate_size))
+            status_text = pattern.format(file_size_str(size, units),
+                                         file_size_str(deflate_size, units))
             view.set_status(self.KEY_SIZE, status_text)
         else:
             view.erase_status(self.KEY_SIZE)
