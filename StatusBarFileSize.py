@@ -12,7 +12,7 @@ def file_size_str(size, units='binary'):
         return None
     divisor = 1024 if units == 'binary' else 1000
     sizes = ["KiB", "MiB", "GiB", "TiB", "PiB", "EiB", "ZiB", "YiB"]
-    if units == 'metric':
+    if units != 'binary':
         sizes = [x.replace('i', '') for x in sizes]
     if size < divisor:
         return "%d %s" % (size, "Bytes" if size != 1 else "Byte")
