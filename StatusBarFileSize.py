@@ -31,7 +31,7 @@ def file_size_str(size, units='binary'):
 SPECIAL_HEXADECIMAL = "special-hexadecimal"
 
 ENCODING_MAP = {
-    "Undefined": "ascii",
+    "Undefined": "utf-8",
     "Hexadecimal": SPECIAL_HEXADECIMAL,
     "UTF-8": "utf-8",
     "UTF-16 LE": "utf-16le",
