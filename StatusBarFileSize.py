@@ -116,14 +116,14 @@ def estimate_file_size(view, deflate=False):
         overhead = CONSTANT_OVERHEAD.get(view.encoding(), b"")
     except KeyError:
         # Unknown encoding or line ending, so we fail.
-        return None, None
+        return None, None, False
 
     size = len(overhead)
     data = io.BytesIO(overhead)
     for start, end in ranges(0, view.size(), BLOCK_SIZE):
         if view.change_count() != tag:
             # Buffer was changed, we abort our mission.
-            return None, None
+            return None, None, True
         r = sublime.Region(start, end)
         text = view.substr(r)
 
@@ -141,10 +141,10 @@ def estimate_file_size(view, deflate=False):
                     data.write(encoded_text)
             except UnicodeError:
                 # Encoding failed, we just fail here.
-                return None, None
+                return None, None, False
 
     deflate_size = len(zlib.compress(data.getvalue())) if deflate else None
-    return int(size), deflate_size
+    return int(size), deflate_size, False
 
 
 class StatusBarFileSize(sublime_plugin.EventListener):
@@ -155,13 +155,13 @@ class StatusBarFileSize(sublime_plugin.EventListener):
         settings = sublime.load_settings(self.SETTINGS)
         deflate = settings.get("deflate", False)
 
-        size, deflate_size = None, None
+        size, deflate_size, changed = None, None, False
         pattern = "{}"
 
         if not view.file_name() or view.is_dirty():
             if settings.get("estimate_file_size", True):
                 # Estimate the file size based on encoding and line endings.
-                size, deflate_size = estimate_file_size(view, deflate)
+                size, deflate_size, changed = estimate_file_size(view, deflate)
                 pattern = "~" + pattern
         else:
             try:
@@ -180,7 +180,10 @@ class StatusBarFileSize(sublime_plugin.EventListener):
             status_text = pattern.format(file_size_str(size, units),
                                          file_size_str(deflate_size, units))
             view.set_status(self.KEY_SIZE, status_text)
-        else:
+        # If the buffer was changed, do not erase status, as another size
+        # calculation is already in progress and it would only cause flickering
+        # Otherwise erase status as we are not able to determine file size
+        elif not changed:
             view.erase_status(self.KEY_SIZE)
 
     # TODO add some scheduling
