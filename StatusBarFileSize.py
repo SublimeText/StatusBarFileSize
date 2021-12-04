@@ -166,8 +166,9 @@ class StatusBarFileSize(sublime_plugin.EventListener):
         else:
             try:
                 size = os.path.getsize(view.file_name())
-                with open(view.file_name(), 'rb') as f:
-                    deflate_size = len(zlib.compress(f.read()))
+                if deflate:
+                    with open(view.file_name(), 'rb') as f:
+                        deflate_size = len(zlib.compress(f.read()))
             except OSError:
                 pass
 
