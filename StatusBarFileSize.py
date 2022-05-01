@@ -77,12 +77,6 @@ ENCODING_MAP = {
     "Vietnamese (Windows 1258)": "windows-1258",
 }
 
-CONSTANT_OVERHEAD = {
-    # Apparently ST doesn't add BOMs.
-    # "UTF-16 LE": b"\xFF\xFE",
-    # "UTF-16 BE": b"\xFE\xFF",
-}
-
 # Ditto for line endings. At least there's only three forms here.
 LINE_ENDINGS_MAP = {
     "Unix": "\n",
@@ -111,13 +105,12 @@ def estimate_file_size(view, deflate=False):
     try:
         line_endings = LINE_ENDINGS_MAP[view.line_endings()]
         encoding = ENCODING_MAP[view.encoding()]
-        overhead = CONSTANT_OVERHEAD.get(view.encoding(), b"")
     except KeyError:
         # Unknown encoding or line ending, so we fail.
         return None, None, False
 
-    size = len(overhead)
-    data = io.BytesIO(overhead)
+    size = 0
+    data = io.BytesIO()
     for start, end in ranges(0, view.size(), BLOCK_SIZE):
         if view.change_count() != tag:
             # Buffer was changed, we abort our mission.
