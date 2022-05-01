@@ -11,19 +11,17 @@ def file_size_str(size, units='binary'):
     if size is None:
         return None
     divisor = 1024 if units == 'binary' else 1000
-    sizes = ["KiB", "MiB", "GiB", "TiB", "PiB", "EiB", "ZiB", "YiB"]
-    if units != 'binary':
-        sizes = [x.replace('i', '') for x in sizes]
+    binary_middle = "i" if units == 'binary' else ""
+    sizes = "KMGTPEZY"
     if size < divisor:
-        return "%d %s" % (size, "Bytes" if size != 1 else "Byte")
-    else:
-        size_val = size / divisor
-        for unit in sizes:
-            if size_val >= divisor:
-                size_val /= divisor
-            else:
-                return "%.2f %s" % (size_val, unit)
-        return "%.2f %s" % (size_val * divisor, sizes[-1])
+        return "{} {}".format(size, "Bytes" if size != 1 else "Byte")
+
+    size_val = size
+    for unit in sizes:
+        size_val /= divisor
+        if size_val < divisor:
+            break
+    return "{:.2} {}{}B".format(size_val, unit, binary_middle)
 
 
 # Far from a perfect system, but seems to be the only way to get a usable Python
