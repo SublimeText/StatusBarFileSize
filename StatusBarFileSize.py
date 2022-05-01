@@ -152,7 +152,8 @@ class StatusBarFileSize(sublime_plugin.EventListener):
         size, deflate_size = None, None
         pattern = "{}"
 
-        if not view.file_name() or view.is_dirty():
+        path = view.file_name()
+        if not path or view.is_dirty():
             if settings.get("estimate_file_size", True):
                 # Estimate the file size based on encoding and line endings.
                 try:
@@ -165,7 +166,7 @@ class StatusBarFileSize(sublime_plugin.EventListener):
                 pattern = "~" + pattern
         else:
             try:
-                size = os.path.getsize(view.file_name())
+                size = os.path.getsize(path)
                 if deflate:
                     with open(view.file_name(), 'rb') as f:
                         deflate_size = len(zlib.compress(f.read()))
