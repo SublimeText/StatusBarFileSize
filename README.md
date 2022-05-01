@@ -16,7 +16,7 @@ can be enabled in the settings.
 
 Use [Package Control][pkgctrl].
 
-This package only supports Sublime Text 3.
+This package only supports Sublime Text 3 and 4.
 
 [pkgctrl]: https://packagecontrol.io
 
