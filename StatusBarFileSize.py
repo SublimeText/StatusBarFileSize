@@ -87,6 +87,10 @@ LINE_ENDINGS_MAP = {
 BLOCK_SIZE = 1000
 
 
+class ViewHasChanged(Exception):
+    pass
+
+
 def ranges(start, end, bs):
     i = 0
     while i < end:
@@ -99,7 +103,7 @@ def count_hex_digits(s):
     return sum(1 for x in s if x in "abcdefABCDEF0123456789")
 
 
-def estimate_file_size(view, deflate=False):
+def estimate_file_size(view, deflate):
     tag = view.change_count()
 
     try:
@@ -107,14 +111,13 @@ def estimate_file_size(view, deflate=False):
         encoding = ENCODING_MAP[view.encoding()]
     except KeyError:
         # Unknown encoding or line ending, so we fail.
-        return None, None, False
+        return None, None
 
     size = 0
     data = io.BytesIO()
     for start, end in ranges(0, view.size(), BLOCK_SIZE):
         if view.change_count() != tag:
-            # Buffer was changed, we abort our mission.
-            return None, None, True
+            raise ViewHasChanged()
         r = sublime.Region(start, end)
         text = view.substr(r)
 
@@ -132,10 +135,10 @@ def estimate_file_size(view, deflate=False):
                     data.write(encoded_text)
             except UnicodeError:
                 # Encoding failed, we just fail here.
-                return None, None, False
+                return None, None
 
     deflate_size = len(zlib.compress(data.getvalue())) if deflate else None
-    return int(size), deflate_size, False
+    return int(size), deflate_size
 
 
 class StatusBarFileSize(sublime_plugin.EventListener):
@@ -146,13 +149,19 @@ class StatusBarFileSize(sublime_plugin.EventListener):
         settings = sublime.load_settings(self.SETTINGS)
         deflate = settings.get("deflate", False)
 
-        size, deflate_size, changed = None, None, False
+        size, deflate_size = None, None
         pattern = "{}"
 
         if not view.file_name() or view.is_dirty():
             if settings.get("estimate_file_size", True):
                 # Estimate the file size based on encoding and line endings.
-                size, deflate_size, changed = estimate_file_size(view, deflate)
+                try:
+                    size, deflate_size = estimate_file_size(view, deflate)
+                except ViewHasChanged:
+                    # If the buffer was changed, abort this procedure as another size
+                    # calculation is already in progress.
+                    # Too many changes to the status bar item would only cause flickering.
+                    return
                 pattern = "~" + pattern
         else:
             try:
@@ -171,10 +180,7 @@ class StatusBarFileSize(sublime_plugin.EventListener):
             status_text = pattern.format(file_size_str(size, units),
                                          file_size_str(deflate_size, units))
             view.set_status(self.KEY_SIZE, status_text)
-        # If the buffer was changed, do not erase status, as another size
-        # calculation is already in progress and it would only cause flickering
-        # Otherwise erase status as we are not able to determine file size
-        elif not changed:
+        else:
             view.erase_status(self.KEY_SIZE)
 
     # TODO add some scheduling
