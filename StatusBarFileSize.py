@@ -1,3 +1,5 @@
+from collections import defaultdict
+from functools import partial
 import io
 import os.path
 import zlib
@@ -145,16 +147,20 @@ class StatusBarFileSize(sublime_plugin.EventListener):
     KEY_SIZE = "FileSize"
     SETTINGS = "StatusBarFileSize.sublime-settings"
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.settings = sublime.load_settings(self.SETTINGS)
+
     def update_file_size(self, view):
-        settings = sublime.load_settings(self.SETTINGS)
-        deflate = settings.get("deflate", False)
+        deflate = self.settings.get("deflate", False)
 
         size, deflate_size = None, None
-        pattern = "{}"
+        estimate = False
 
         path = view.file_name()
         if not path or view.is_dirty():
-            if settings.get("estimate_file_size", True):
+            if self.settings.get("estimate_file_size", True):
+                estimate = True
                 # Estimate the file size based on encoding and line endings.
                 try:
                     size, deflate_size = estimate_file_size(view, deflate)
@@ -163,7 +169,6 @@ class StatusBarFileSize(sublime_plugin.EventListener):
                     # calculation is already in progress.
                     # Too many changes to the status bar item would only cause flickering.
                     return
-                pattern = "~" + pattern
         else:
             try:
                 size = os.path.getsize(path)
@@ -173,18 +178,30 @@ class StatusBarFileSize(sublime_plugin.EventListener):
             except OSError:
                 pass
 
-        if deflate and deflate_size:
-            pattern += " (gzip: {})"
-
-        units = settings.get('units', 'binary')
+        units = self.settings.get('units', 'binary')
         if size is not None:
-            status_text = pattern.format(file_size_str(size, units),
-                                         file_size_str(deflate_size, units))
+            status_texts = [file_size_str(size, units)]
+            if deflate and deflate_size:
+                status_texts.append("(gzip: {})".format(file_size_str(deflate_size, units)))
+            status_text = "{}{}".format("~" if estimate else "", " ".join(status_texts))
             view.set_status(self.KEY_SIZE, status_text)
         else:
             view.erase_status(self.KEY_SIZE)
 
-    # TODO add some scheduling
-    on_post_save_async = update_file_size
-    on_modified_async = update_file_size
-    on_activated_async = update_file_size
+    # Basically cheap semaphores since we're always on the same thread.
+    call_cache = defaultdict(int)
+
+    def _check_call(self, view):
+        self.call_cache[view] -= 1
+        if self.call_cache[view] == 0:
+            del self.call_cache[view]
+            self.update_file_size(view)
+
+    def update_file_size_debounced(self, view):
+        delay = self.settings.get('typing_delay', 200)
+        self.call_cache[view] += 1
+        sublime.set_timeout_async(partial(self._check_call, view), delay)
+
+    on_post_save_async = update_file_size_debounced
+    on_modified_async = update_file_size_debounced
+    on_activated_async = update_file_size_debounced

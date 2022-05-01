@@ -13,4 +13,7 @@
 
     // Choose between "metric" and "binary" units (e.g. KB vs KiB).
     "units": "binary",
+
+    // Time to wait until no new changes are made before determining size, in ms.
+    "typing_delay": 200,
 }
