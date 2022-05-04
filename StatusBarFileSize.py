@@ -199,7 +199,7 @@ class StatusBarFileSize(sublime_plugin.EventListener):
             self.update_file_size(view)
 
     def update_file_size_debounced(self, view):
-        delay = self.settings.get('typing_delay', 200)
+        delay = self.settings.get('typing_delay') or 200
         self.call_cache[view] += 1
         sublime.set_timeout_async(partial(self._check_call, view), delay)
 
