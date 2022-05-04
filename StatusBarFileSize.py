@@ -1,5 +1,5 @@
 from collections import defaultdict
-from functools import partial
+from functools import partial, lru_cache
 import io
 import os.path
 import zlib
@@ -147,9 +147,10 @@ class StatusBarFileSize(sublime_plugin.EventListener):
     KEY_SIZE = "FileSize"
     SETTINGS = "StatusBarFileSize.sublime-settings"
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.settings = sublime.load_settings(self.SETTINGS)
+    @property
+    @lru_cache(maxsize=1)
+    def settings(self):
+        return sublime.load_settings(self.SETTINGS)
 
     def update_file_size(self, view):
         deflate = self.settings.get("deflate", False)
