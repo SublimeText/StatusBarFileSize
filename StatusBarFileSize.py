@@ -23,7 +23,7 @@ def file_size_str(size, units='binary'):
         size_val /= divisor
         if size_val < divisor:
             break
-    return "{:.2} {}{}B".format(size_val, unit, binary_middle)
+    return "{:.2f} {}{}B".format(size_val, unit, binary_middle)
 
 
 # Far from a perfect system, but seems to be the only way to get a usable Python
